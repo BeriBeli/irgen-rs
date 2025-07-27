@@ -1,2 +1,1 @@
-# RegistersEditor
-An EDA software.
+# irgen_rs
