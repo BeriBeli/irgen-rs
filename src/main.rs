@@ -2,8 +2,10 @@ mod logger;
 mod error;
 mod schema;
 mod parser;
+mod excel;
 
-// use calamine::{Reader, Xlsx, open_workbook};
+use calamine::{open_workbook, Reader, Xlsx};
+use crate::excel::ToDataFrame;
 // use polars::prelude::*;
 
 fn main() -> anyhow::Result<(), error::Error> {
@@ -11,14 +13,10 @@ fn main() -> anyhow::Result<(), error::Error> {
 
     let source = "example.xlsx".to_string();
 
-    // let df = excel::read_excel(&source, "block0")?;
-
-    // println!("{:#?}", df);
-
     // let mut workbook: Xlsx<_> = open_workbook(&source)?;
 
     // let sheet_names = workbook.sheet_names().to_owned();
-        
+
     // println!("{:#?}", sheet_names);
 
     // let sheets = workbook.worksheets();
@@ -28,9 +26,16 @@ fn main() -> anyhow::Result<(), error::Error> {
     //     println!("{:#?}", range_data);
     // }
 
-    // let parserd_df = parser::parser_register(&df)?;
+    let df = excel::ToDataFrameReader::new(&source)
+        .open_sheet("block0")
+        .ok_or("failed to open sheet")?
+        .to_data_frame()?;
 
-    // println!("{:#?}", parserd_df);
+    println!("{:#?}", df);
+
+    let parserd_df = parser::parser_register(&df)?;
+
+    println!("{:#?}", parserd_df);
 
     Ok(())
 }
