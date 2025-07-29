@@ -5,8 +5,9 @@ edition = "2024"
 
 [dependencies]
 calamine = { version = "0.29.0", features = ["dates"] }
-polars = {version = "0.49.1", features = ["lazy", "strings", "regex", "string_to_integer", "dtype-array", "range"]}
+polars = {version = "0.49.1", features = ["lazy", "strings", "regex", "string_to_integer", "dtype-array", "range", "serde"]}
 serde = {version = "1.0.219", features = ["derive"]}
 tracing = "0.1.41"
 tracing-subscriber = {version = "0.3.19", features = ["env-filter"]}
 anyhow = "1.0.98"
+thiserror = "2.0.12"

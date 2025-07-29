@@ -1,3 +1,4 @@
+use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,9 +29,23 @@ pub struct Register {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Field {
-    name: String,
-    offset: String,
-    width: String,
-    attribute: String,
-    default: String,
+    name: Option<String>,
+    offset: Option<String>,
+    width: Option<String>,
+    attribute: Option<String>,
+    default: Option<String>,
+}
+
+pub fn dataframe_to_fields(df: DataFrame) -> anyhow::Result<Vec<Field>> {
+
+    let fields = (0..df.height()).map(|i| {
+        let name = df.column("FIELD")?.str()?.get(i).map(|s| s.to_string());
+        let offset = df.column("BIT")?.str()?.get(i).map(|s| s.to_string());
+        let width = df.column("WIDTH")?.str()?.get(i).map(|s| s.to_string());
+        let attribute = df.column("ATTRIBUTE")?.str()?.get(i).map(|s| s.to_string());
+        let default = df.column("DEFAULT")?.str()?.get(i).map(|s| s.to_string());
+        Ok(Field {name, offset, width, attribute, default})
+    }).collect::<anyhow::Result<Vec<Field>>>()?;
+
+    Ok(fields)
 }

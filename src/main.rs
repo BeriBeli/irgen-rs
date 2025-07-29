@@ -39,6 +39,10 @@ fn main() -> anyhow::Result<()> {
         ]
     )?;
 
+    // for i in df.iter() {
+    //     tracing::info!("{}", i);
+    // }
+
     let filled_df = df
         .clone()
         .lazy()
@@ -96,6 +100,11 @@ fn main() -> anyhow::Result<()> {
                 .str()
                 .to_integer(lit(16), false)
                 .alias("BASE_ADDR"),
+            col("BIT")
+                .over(&[col("ADDR")])
+                .str()
+                .extract(lit(r"\[(?:\d+:)?(\d+)]"), 1)
+                .alias("BIT_OFFSET")
         ])
         .with_column(
             when(
@@ -158,10 +167,11 @@ fn main() -> anyhow::Result<()> {
         .agg([
             col("REG_WIDTH"),
             col("FIELD"),
-            col("BIT"),
+            // col("BIT"),
             col("WIDTH"),
             col("ATTRIBUTE"),
             col("BYTES"),
+            col("BIT_OFFSET"),
             // col("BASE_REG"),
             // col("IS_EXPANDABLE"),
             // col("START"),
@@ -172,6 +182,12 @@ fn main() -> anyhow::Result<()> {
         .collect()?;
 
     tracing::info!("{}", grouped_df);
+
+    // let vec = schema::base::dataframe_to_fields(parsed_df)?;
+
+    // for i in vec.iter() {
+    //     tracing::info!("{:#?}", i);
+    // }
 
     Ok(())
 }
