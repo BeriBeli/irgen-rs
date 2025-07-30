@@ -174,5 +174,3 @@ where
     )
 
 }
-
-// PolarsError

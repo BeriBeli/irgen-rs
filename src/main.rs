@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use polars::prelude::*;
 use calamine::{open_workbook, Reader, Xlsx};
 use crate::{excel::ToDataFrame, schema::base::{dataframe_to_blocks, dataframe_to_component}};
+use crate::schema::ipxact;
 
 fn main() -> anyhow::Result<(), error::Error> {
     logger::init();
@@ -34,6 +35,8 @@ fn main() -> anyhow::Result<(), error::Error> {
     )?;
 
     tracing::info!("{:#?}", component);
+
+    let ipxact_component = ipxact::Component::from(&component);
 
     Ok(())
 }
