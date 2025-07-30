@@ -10,6 +10,9 @@ pub enum Error {
     #[error("Polars error: {0}")]
     PolarsError(#[from] polars::prelude::PolarsError),
 
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
+
     #[error("String error: {0}")]
     StringError(String),
 

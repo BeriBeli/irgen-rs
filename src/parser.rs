@@ -1,6 +1,6 @@
 use polars::prelude::*;
 
-pub fn get_value_by_tag(df: &DataFrame, tag: &str) -> anyhow::Result<String> {
+pub fn get_value_by_tag(df: &DataFrame, tag: &str) -> anyhow::Result<String, crate::error::Error> {
     let result_df = df
         .clone()
         .lazy()
@@ -144,6 +144,7 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
         .lazy()
         .group_by_stable(["REG"])
         .agg([
+            col("ADDR"),
             col("REG_WIDTH"),
             col("FIELD"),
             // col("BIT"),
@@ -151,6 +152,7 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
             col("ATTRIBUTE"),
             col("BYTES"),
             col("BIT_OFFSET"),
+            col("DEFAULT"),
             // col("BASE_REG"),
             // col("IS_EXPANDABLE"),
             // col("START"),
