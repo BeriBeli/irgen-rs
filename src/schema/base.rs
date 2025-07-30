@@ -103,8 +103,13 @@ pub fn dataframe_to_registers(df: &DataFrame) -> anyhow::Result<Vec<Register>, c
 
 }
 
-pub fn dataframe_to_blocks(df: &DataFrame) -> anyhow::Result<Vec<Block>, crate::error::Error> {
-
+pub fn dataframe_to_blocks<F>(
+    df: &DataFrame,
+    registers_extractor: F
+) -> anyhow::Result<Vec<Block>, crate::error::Error>
+where
+    F: Fn(&str) -> anyhow::Result<Vec<Register>, crate::error::Error>
+{
     (0..df.height())
     .map(|i| {
         let name = df
@@ -112,6 +117,7 @@ pub fn dataframe_to_blocks(df: &DataFrame) -> anyhow::Result<Vec<Block>, crate::
             .str()?
             .get(i)
             .map(|s| s.to_owned());
+        let block_name = name.as_ref().ok_or_else(|| PolarsError::NoData("Block name not found".into()))?;
         let offset = df
             .column("OFFSET")?
             .str()?
@@ -123,7 +129,7 @@ pub fn dataframe_to_blocks(df: &DataFrame) -> anyhow::Result<Vec<Block>, crate::
             .get(i)
             .map(|s| s.to_owned());
         let size = Some("32".to_owned());
-        let registers = None;
+        let registers = Some(registers_extractor(block_name)?);
 
         Ok(Block {
             name,
