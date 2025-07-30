@@ -4,29 +4,36 @@ mod schema;
 mod parser;
 mod excel;
 
-// use calamine::{open_workbook, Reader, Xlsx};
-use crate::excel::ToDataFrame;
-// use polars::prelude::*;
+use std::collections::HashMap;
+use polars::prelude::*;
+use calamine::{open_workbook, Reader, Xlsx};
+use crate::{excel::ToDataFrame, schema::base::{dataframe_to_blocks, dataframe_to_component}};
 
 fn main() -> anyhow::Result<(), error::Error> {
     logger::init();
 
     let source = "example.xlsx".to_string();
 
-    let df = excel::ToDataFrameReader::new(&source)
-        .open_sheet("block0")
-        .ok_or("failed to open sheet")?
-        .to_data_frame()?;
+    let mut wb: Xlsx<_> = open_workbook(&source)?;
 
-    println!("{:#?}", df);
+    let sheets = wb.worksheets();
 
-    let parserd_df = parser::parser_register(&df)?;
+    let df_map: HashMap<String, DataFrame> = sheets.iter()
+    .map(|(sheet_name, range_data)| {
+        range_data.to_data_frame()
+            .map(|df| (sheet_name.to_owned(), df))
+    })
+    .collect::<Result<HashMap<_, _>, _>>()?;
 
-    println!("{:#?}", parserd_df);
+    let component = dataframe_to_component(
+        &(df_map.get("version").unwrap()), 
+        || {
+            dataframe_to_blocks(
+                &(df_map.get("address_map").unwrap()),
+            )}
+    )?;
 
-    let registers = schema::base::dataframe_to_registers(parserd_df)?;
-
-    println!("{:#?}", registers);
+    tracing::info!("{:#?}", component);
 
     Ok(())
 }

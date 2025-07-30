@@ -1,15 +1,10 @@
 use std::collections::HashMap;
-use std::{fmt::Display, fs::File, io::BufReader, path::Path};
+use std::{fmt::Display};
 
-use calamine::{CellType, Data, DataType, Range, Reader, Xlsx};
-use polars::frame::DataFrame;
+use calamine::{CellType, DataType, Range};
 use polars::prelude::*;
 
 use crate::error::Error;
-
-pub struct ToDataFrameReader {
-    workbook: Xlsx<BufReader<File>>,
-}
 
 pub trait ToDataFrame {
     fn to_data_frame(&self) -> Result<DataFrame, Error>;
@@ -66,26 +61,5 @@ where
 
         Ok(df)
     }
-}
 
-impl ToDataFrameReader {
-    pub fn open_workbook<P: AsRef<Path>>(file_name: P) -> Xlsx<BufReader<File>> {
-        let workbook: Xlsx<_> =
-            calamine::open_workbook(file_name).expect("Could not open workbook");
-        workbook
-    }
-
-    pub fn new<P: AsRef<Path>>(file_name: P) -> Self {
-        Self {
-            workbook: ToDataFrameReader::open_workbook(file_name),
-        }
-    }
-
-    pub fn open_sheet<S: AsRef<str>>(&mut self, sheet_name: S) -> Option<Range<Data>> {
-        if let Ok(sheet_range) = self.workbook.worksheet_range(sheet_name.as_ref()) {
-            Some(sheet_range)
-        } else {
-            None
-        }
-    }
 }
