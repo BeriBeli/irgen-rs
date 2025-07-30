@@ -9,10 +9,11 @@ use std::fs;
 
 use polars::prelude::*;
 use calamine::{open_workbook, Reader, Xlsx};
+
 use crate::{excel::ToDataFrame, schema::base::{dataframe_to_blocks, dataframe_to_component}};
 use crate::parser::parser_register;
 use crate::schema::base::dataframe_to_registers;
-use crate::schema::ipxact;
+//use crate::schema::ipxact;
 
 fn main() -> anyhow::Result<(), error::Error> {
     logger::init();
@@ -36,6 +37,7 @@ fn main() -> anyhow::Result<(), error::Error> {
             dataframe_to_blocks(
                 &(df_map.get("address_map").unwrap()),
                 |s| {
+                    tracing::debug!("block_name: {}", s);
                     dataframe_to_registers(
                         &parser_register(&(df_map.get(s).unwrap()))?,
                     )}

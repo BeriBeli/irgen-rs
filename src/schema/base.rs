@@ -89,8 +89,11 @@ pub fn dataframe_to_registers(df: &DataFrame) -> anyhow::Result<Vec<Register>, c
             .column("REG_WIDTH")?
             .list()?
             .get_as_series(i)
-            .and_then(|s| s.str().map(|ca| ca.get(0).map(|s| s.to_owned())).ok())
+            .and_then(|s| s.str().map(|ca| ca.get(0).map(|s| s.to_string())).ok())
             .flatten();
+
+        tracing::info!("{:#?}",df.column("REG_WIDTH")?.list()?.get_as_series(i));
+        tracing::info!("size: {:?}", size);
 
         Ok(Register {
             name,
