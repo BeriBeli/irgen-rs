@@ -12,11 +12,11 @@ use polars::prelude::*;
 
 use crate::parser::parser_register;
 use crate::schema::base::dataframe_to_registers;
+use crate::schema::ipxact;
 use crate::{
     excel::ToDataFrame,
     schema::base::{dataframe_to_blocks, dataframe_to_component},
 };
-//use crate::schema::ipxact;
 
 fn main() -> anyhow::Result<(), error::Error> {
     logger::init();
@@ -45,9 +45,13 @@ fn main() -> anyhow::Result<(), error::Error> {
 
     // tracing::info!("{:#?}", component);
 
-    // let ipxact_component = ipxact::Component::from(&component);
-    let pretty_json = serde_json::to_string_pretty(&component).unwrap();
-    fs::write("person_pretty.json", pretty_json)?;
+    let ipxact_component = ipxact::Component::from(&component)?;
+
+    let xml = quick_xml::se::to_string(&ipxact_component)?;
+    let json = serde_json::to_string_pretty(&ipxact_component)?;
+
+    fs::write("example.xml", xml)?;
+    fs::write("example.json", json)?;
 
     Ok(())
 }

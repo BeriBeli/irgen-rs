@@ -9,8 +9,14 @@ pub enum Error {
     #[error("Polars error: {0}")]
     PolarsError(#[from] polars::prelude::PolarsError),
 
+    #[error("XML error: {0}")]
+    XmlSerializeError(#[from] quick_xml::SeError),
+
+    #[error("Json error: {0}")]
+    JsonError(#[from] serde_json::Error),
+
     #[error(transparent)]
-    Anyhow(#[from] anyhow::Error),
+    AnyhowError(#[from] anyhow::Error),
 
     #[error("String error: {0}")]
     StringError(String),

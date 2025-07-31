@@ -37,6 +37,75 @@ pub struct Field {
     default: Option<String>,
 }
 
+impl Component {
+    pub fn vendor(&self) -> &Option<String> {
+        &self.vendor
+    }
+    pub fn library(&self) -> &Option<String> {
+        &self.library
+    }
+    pub fn name(&self) -> &Option<String> {
+        &self.name
+    }
+    pub fn version(&self) -> &Option<String> {
+        &self.version
+    }
+    pub fn blocks(&self) -> &Option<Vec<Block>> {
+        &self.blocks
+    }
+}
+
+impl Block {
+    pub fn name(&self) -> &Option<String> {
+        &self.name
+    }
+    pub fn offset(&self) -> &Option<String> {
+        &self.offset
+    }
+    pub fn range(&self) -> &Option<String> {
+        &self.range
+    }
+    pub fn size(&self) -> &Option<String> {
+        &self.size
+    }
+    pub fn registers(&self) -> &Option<Vec<Register>> {
+        &self.registers
+    }
+}
+
+impl Register {
+    pub fn name(&self) -> &Option<String> {
+        &self.name
+    }
+    pub fn offset(&self) -> &Option<String> {
+        &self.offset
+    }
+    pub fn size(&self) -> &Option<String> {
+        &self.size
+    }
+    pub fn fields(&self) -> &Option<Vec<Field>> {
+        &self.fields
+    }
+}
+
+impl Field {
+    pub fn name(&self) -> &Option<String> {
+        &self.name
+    }
+    pub fn offset(&self) -> &Option<String> {
+        &self.offset
+    }
+    pub fn width(&self) -> &Option<String> {
+        &self.width
+    }
+    pub fn attribute(&self) -> &Option<String> {
+        &self.attribute
+    }
+    pub fn default(&self) -> &Option<String> {
+        &self.default
+    }
+}
+
 pub fn dataframe_to_registers(
     df: &DataFrame,
 ) -> anyhow::Result<Vec<Register>, crate::error::Error> {
