@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::{fmt::Display};
+use std::fmt::Display;
 
 use calamine::{CellType, DataType, Range};
 use polars::prelude::*;
@@ -14,7 +14,6 @@ impl<T> ToDataFrame for Range<T>
 where
     T: DataType + CellType + Display,
 {
-
     fn to_data_frame(&self) -> Result<DataFrame, Error> {
         let all_rows = self.rows().collect::<Vec<_>>();
 
@@ -41,9 +40,7 @@ where
         for row in &all_rows[1..] {
             row.iter().enumerate().for_each(|(col_idx, cell)| {
                 let cell_str = match cell {
-                    c if c.is_datetime() => c
-                        .as_datetime()
-                        .map(|dt| dt.to_string()),
+                    c if c.is_datetime() => c.as_datetime().map(|dt| dt.to_string()),
                     c if c.is_empty() => None,
                     _ => Some(cell.to_string()),
                 };
@@ -61,5 +58,4 @@ where
 
         Ok(df)
     }
-
 }

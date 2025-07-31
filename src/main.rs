@@ -1,18 +1,21 @@
-mod logger;
 mod error;
-mod schema;
-mod parser;
 mod excel;
+mod logger;
+mod parser;
+mod schema;
 
 use std::collections::HashMap;
 use std::fs;
 
+use calamine::{Reader, Xlsx, open_workbook};
 use polars::prelude::*;
-use calamine::{open_workbook, Reader, Xlsx};
 
-use crate::{excel::ToDataFrame, schema::base::{dataframe_to_blocks, dataframe_to_component}};
 use crate::parser::parser_register;
 use crate::schema::base::dataframe_to_registers;
+use crate::{
+    excel::ToDataFrame,
+    schema::base::{dataframe_to_blocks, dataframe_to_component},
+};
 //use crate::schema::ipxact;
 
 fn main() -> anyhow::Result<(), error::Error> {
@@ -24,25 +27,21 @@ fn main() -> anyhow::Result<(), error::Error> {
 
     let sheets = wb.worksheets();
 
-    let df_map: HashMap<String, DataFrame> = sheets.iter()
-    .map(|(sheet_name, range_data)| {
-        range_data.to_data_frame()
-            .map(|df| (sheet_name.to_owned(), df))
-    })
-    .collect::<Result<HashMap<_, _>, _>>()?;
+    let df_map: HashMap<String, DataFrame> = sheets
+        .iter()
+        .map(|(sheet_name, range_data)| {
+            range_data
+                .to_data_frame()
+                .map(|df| (sheet_name.to_owned(), df))
+        })
+        .collect::<Result<HashMap<_, _>, _>>()?;
 
-    let component = dataframe_to_component(
-        &(df_map.get("version").unwrap()),
-        || {
-            dataframe_to_blocks(
-                &(df_map.get("address_map").unwrap()),
-                |s| {
-                    tracing::debug!("block_name: {}", s);
-                    dataframe_to_registers(
-                        &parser_register(&(df_map.get(s).unwrap()))?,
-                    )}
-            )}
-    )?;
+    let component = dataframe_to_component(&(df_map.get("version").unwrap()), || {
+        dataframe_to_blocks(&(df_map.get("address_map").unwrap()), |s| {
+            tracing::debug!("block_name: {}", s);
+            dataframe_to_registers(&parser_register(&(df_map.get(s).unwrap()))?)
+        })
+    })?;
 
     // tracing::info!("{:#?}", component);
 

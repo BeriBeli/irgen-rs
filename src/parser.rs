@@ -1,7 +1,7 @@
 use polars::prelude::*;
 
 pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error::Error> {
-        let filled_df = df
+    let filled_df = df
         .clone()
         .lazy()
         .select([col("*").fill_null_with_strategy(FillNullStrategy::Forward(None))])
@@ -14,12 +14,12 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
         .lazy()
         .with_columns(&[
             col("WIDTH")
-                .cast(DataType::Int64)
+                .cast(DataType::Int32)
                 .sum()
                 .over(&[col("ADDR")])
                 .alias("REG_WIDTH"),
             (col("WIDTH")
-                .cast(DataType::Int64)
+                .cast(DataType::Int32)
                 .sum()
                 .over(&[col("ADDR")])
                 / lit(8))
@@ -41,14 +41,14 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit(r"n\s*=\s*(\d+)"), 1)
-                .cast(DataType::Int64)
+                .cast(DataType::Int32)
                 .alias("START"),
             col("REG")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit(r"~\s*(\d+)"), 1)
-                .cast(DataType::Int64)
+                .cast(DataType::Int32)
                 .alias("END"),
             col("ADDR")
                 .first()
@@ -62,7 +62,7 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit(r"\[(?:\d+:)?(\d+)]"), 1)
-                .alias("BIT_OFFSET")
+                .alias("BIT_OFFSET"),
         ])
         .with_column(
             when(
@@ -74,7 +74,7 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
                 col("START"),
                 col("END") + lit(1),
                 lit(1),
-                DataType::Int64,
+                DataType::Int32,
             ))
             .otherwise(lit(Null {}))
             .alias("N_SERIES"),
@@ -91,17 +91,20 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
         .with_columns(&[
             when(col("IS_EXPANDABLE"))
                 .then(
-                    (col("BASE_ADDR").cast(DataType::Int64)
-                    + col("N_SERIES").cast(DataType::Int64)
-                    * col("BYTES").cast(DataType::Int64))
-                        .map(|s| {
-                            let ca = s.i64()?;
+                    (col("BASE_ADDR").cast(DataType::Int32)
+                        + col("N_SERIES").cast(DataType::Int32)
+                            * col("BYTES").cast(DataType::Int32))
+                    .map(
+                        |s| {
+                            let ca = s.i32()?;
                             let new_ca: StringChunked = ca
                                 .into_iter()
                                 .map(|opt_x| opt_x.map(|x| format!("0x{:X}", x)))
                                 .collect();
                             Ok(Some(new_ca.into_column()))
-                        }, GetOutput::from_type(DataType::String))
+                        },
+                        GetOutput::from_type(DataType::String),
+                    ),
                 )
                 .otherwise(col("ADDR"))
                 .alias("ADDR"),
@@ -141,44 +144,38 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
         ])
         .collect()?;
 
-    tracing::info!("{}", grouped_df);
-
-    // let vec = schema::base::dataframe_to_fields(parsed_df)?;
-
-    // for i in vec.iter() {
-    //     tracing::info!("{:#?}", i);
-    // }
+    tracing::debug!("{}", grouped_df);
 
     Ok(grouped_df)
 }
 
-    // let df = df!(
-    //     "ADDR" => &[
-    //         Some("0x0"), Some("0x4"), None, None, None,
-    //         Some("0x8"), Some("0xc"), Some("0x10"), Some("0x20"), None
-    //     ],
-    //     "REG" => &[
-    //         Some("reg0"), Some("reg1"), None, None, None,
-    //         Some("reg2"), Some("reg3"), Some("rega{n}, n=0~3"), Some("regb{n}, n=0~3"), None
-    //     ],
-    //     "FIELD" => &[
-    //         Some("field0"), Some("reserved"), Some("field1"), Some("reserved"), Some("field0"),
-    //         Some("field0"), Some("field0"), Some("field0"), Some("field1"), Some("field0")
-    //     ],
-    //     "BIT" => &[
-    //         Some("[31:0]"), Some("[31:24]"), Some("[23:16]"), Some("[15:8]"), Some("[7:0]"),
-    //         Some("[31:0]"), Some("[31:0]"), Some("[31:0]"), Some("[31:16]"), Some("[15:0]")
-    //     ],
-    //     "WIDTH" => &[
-    //         Some("32"), Some("8"), Some("8"), Some("8"), Some("8"),
-    //         Some("32"), Some("32"), Some("32"), Some("16"), Some("16")
-    //     ],
-    //     "ATTRIBUTE" => &[
-    //         Some("RW"), Some("RO"), Some("RW"), Some("RO"), Some("RW"),
-    //         Some("W1C"), Some("RC"), Some("RW"), Some("RW"), Some("RW")
-    //     ],
-    //     "DEFAULT" => &[
-    //         Some("0x1234"), Some("0"), Some("0"), Some("0"), Some("0"),
-    //         Some("0"), Some("0"), Some("0"), Some("0"), Some("0")
-    //     ]
-    // )?;
+// let df = df!(
+//     "ADDR" => &[
+//         Some("0x0"), Some("0x4"), None, None, None,
+//         Some("0x8"), Some("0xc"), Some("0x10"), Some("0x20"), None
+//     ],
+//     "REG" => &[
+//         Some("reg0"), Some("reg1"), None, None, None,
+//         Some("reg2"), Some("reg3"), Some("rega{n}, n=0~3"), Some("regb{n}, n=0~3"), None
+//     ],
+//     "FIELD" => &[
+//         Some("field0"), Some("reserved"), Some("field1"), Some("reserved"), Some("field0"),
+//         Some("field0"), Some("field0"), Some("field0"), Some("field1"), Some("field0")
+//     ],
+//     "BIT" => &[
+//         Some("[31:0]"), Some("[31:24]"), Some("[23:16]"), Some("[15:8]"), Some("[7:0]"),
+//         Some("[31:0]"), Some("[31:0]"), Some("[31:0]"), Some("[31:16]"), Some("[15:0]")
+//     ],
+//     "WIDTH" => &[
+//         Some("32"), Some("8"), Some("8"), Some("8"), Some("8"),
+//         Some("32"), Some("32"), Some("32"), Some("16"), Some("16")
+//     ],
+//     "ATTRIBUTE" => &[
+//         Some("RW"), Some("RO"), Some("RW"), Some("RO"), Some("RW"),
+//         Some("W1C"), Some("RC"), Some("RW"), Some("RW"), Some("RW")
+//     ],
+//     "DEFAULT" => &[
+//         Some("0x1234"), Some("0"), Some("0"), Some("0"), Some("0"),
+//         Some("0"), Some("0"), Some("0"), Some("0"), Some("0")
+//     ]
+// )?;
