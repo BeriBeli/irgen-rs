@@ -36,12 +36,24 @@ fn main() -> anyhow::Result<(), error::Error> {
         })
         .collect::<Result<HashMap<_, _>, _>>()?;
 
-    let component = dataframe_to_component(&(df_map.get("version").unwrap()), || {
-        dataframe_to_blocks(&(df_map.get("address_map").unwrap()), |s| {
-            tracing::debug!("block_name: {}", s);
-            dataframe_to_registers(&parser_register(&(df_map.get(s).unwrap()))?)
-        })
-    })?;
+    let component = {
+        let component_df = df_map
+            .get("version")
+            .ok_or_else(|| error::Error::NotFound("version".into()))?;
+        dataframe_to_component(component_df, || {
+            let blocks_df = df_map
+                .get("address_map")
+                .ok_or_else(|| error::Error::NotFound("address_map".into()))?;
+            dataframe_to_blocks(blocks_df, |s| {
+                tracing::debug!("block_name: {}", s);
+                let register_df = df_map
+                    .get(s)
+                    .ok_or_else(|| error::Error::NotFound(s.into()))?;
+                let parsered_df = parser_register(register_df)?;
+                dataframe_to_registers(&parsered_df)
+            })
+        })?
+    };
 
     // tracing::info!("{:#?}", component);
 

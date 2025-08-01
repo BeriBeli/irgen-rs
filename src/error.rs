@@ -1,28 +1,31 @@
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Calamine error: {0}")]
-    CalamineError(#[from] calamine::Error),
+    Calamine(#[from] calamine::Error),
 
     #[error("Xlsx error: {0}")]
-    XlsxError(#[from] calamine::XlsxError),
+    Xlsx(#[from] calamine::XlsxError),
 
     #[error("Polars error: {0}")]
-    PolarsError(#[from] polars::prelude::PolarsError),
+    Polars(#[from] polars::prelude::PolarsError),
 
-    #[error("XML error: {0}")]
-    XmlSerializeError(#[from] quick_xml::SeError),
+    #[error("XML Serialization error: {0}")]
+    XmlSe(#[from] quick_xml::SeError),
 
     #[error("Json error: {0}")]
-    JsonError(#[from] serde_json::Error),
+    Json(#[from] serde_json::Error),
 
     #[error(transparent)]
-    AnyhowError(#[from] anyhow::Error),
+    Anyhow(#[from] anyhow::Error),
+
+    #[error("IO error: {0}")]
+    IO(#[from] std::io::Error),
 
     #[error("String error: {0}")]
     StringError(String),
 
-    #[error("IO error: {0}")]
-    IOError(#[from] std::io::Error),
+    #[error("HashMap not found for key {0}")]
+    NotFound(String),
 }
 
 impl From<&str> for Error {
