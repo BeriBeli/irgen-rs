@@ -7,64 +7,52 @@ use crate::error::Error;
 
 impl ipxact::Component {
     pub fn from(base: &base::Component) -> anyhow::Result<Self, Error> {
-        // Convert blocks from base format to IP-XACT address blocks
-        let address_blocks = base.blocks().as_ref().map(|blocks| {
-            blocks.iter().map(|block| -> anyhow::Result<ipxact::Block, Error> {
-                Ok(ipxact::Block::new()
-                    .set_name(block.name().clone())?
-                    .set_base_address(block.offset().clone())?
-                    .set_range(block.range().clone())?
-                    .set_width(block.size().clone())?
-                    .set_register(block.registers().as_ref().map(|registers| {
-                        registers.iter().map(|register| -> anyhow::Result<ipxact::Register, Error> {
-                            Ok(ipxact::Register::new()
-                                .set_name(register.name().clone())?
-                                .set_address_offset(register.offset().clone())?
-                                .set_size(register.size().clone())?
-                                .set_field(register.fields().as_ref().map(|fields| {
-                                    fields.iter().map(|field| -> anyhow::Result<ipxact::Field, Error> {
-                                        Ok(ipxact::Field::new()
-                                            .set_name(field.name().clone())?
-                                            .set_bit_offset(field.offset().clone())?
-                                            .set_bit_width(field.width().clone())?
-                                            .set_access(field.attribute().clone())?
-                                            .set_modified_write_value(field.attribute().clone())?
-                                            .set_read_action(field.attribute().clone())?
-                                            .set_resets(
-                                                Some(ipxact::Resets::new()
-                                                    .set_reset(Some(vec![
-                                                        ipxact::Reset::new()
-                                                            .set_value(field.default().clone())?
-                                                    ]))?)
-                                            )?
-                                        )
-                                    }).collect::<Result<Vec<_>, _>>().unwrap()
-                                }))?
-                            )
-                        }).collect::<Result<Vec<_>, _>>().unwrap()
-                    }))?
-                )
-            }).collect::<Result<Vec<_>, _>>().unwrap()
-        });
-
-        // Create memory maps
-        let memory_maps = address_blocks.map(|address_block| {
-            ipxact::MemoryMaps::new()
-                .set_memory_map(Some(vec![
-                    ipxact::MemoryMap::new()
-                        .set_name(Some("default_memory_map".to_string()))
-                        .unwrap()
-                        .set_address_block(Some(address_block))
-                        .unwrap(),
-                ]))
-                .unwrap()
-        });
+        let memory_maps = ipxact::MemoryMaps::new()
+            .set_memory_map(vec![
+                ipxact::MemoryMap::new()
+                    .set_name("default_memory_map".to_string())?
+                    .set_address_block(base.blks().iter().map(|blk| -> anyhow::Result<ipxact::Block, Error> {
+                        Ok(ipxact::Block::new()
+                            .set_name(blk.name().to_owned())?
+                            .set_base_address(blk.offset().to_owned())?
+                            .set_range(blk.range().to_owned())?
+                            .set_width(blk.size().to_owned())?
+                            .set_register(blk.regs().iter().map(|reg| -> anyhow::Result<ipxact::Register, Error> {
+                                    Ok(ipxact::Register::new()
+                                        .set_name(reg.name().to_owned())?
+                                        .set_address_offset(reg.offset().to_owned())?
+                                        .set_size(reg.size().to_owned())?
+                                        .set_field(reg.fields().iter().map(|field| -> anyhow::Result<ipxact::Field, Error> {
+                                                Ok(ipxact::Field::new()
+                                                    .set_name(field.name().to_owned())?
+                                                    .set_bit_offset(field.offset().to_owned())?
+                                                    .set_bit_width(field.width().to_owned())?
+                                                    .set_access(field.attr().to_owned())?
+                                                    .set_modified_write_value(field.attr().to_owned())?
+                                                    .set_read_action(field.attr().to_owned())?
+                                                    .set_resets(
+                                                        ipxact::Resets::new()
+                                                            .set_reset(vec![
+                                                                ipxact::Reset::new()
+                                                                    .set_value(field.reset().to_owned())?
+                                                            ])?
+                                                    )?
+                                                )
+                                            }).collect::<Result<Vec<_>, _>>()?
+                                        )?
+                                    )
+                                }).collect::<Result<Vec<_>, _>>()?
+                            )?
+                        )
+                    }).collect::<Result<Vec<_>, _>>()?
+                )?
+            ])?;
 
         Ok(ipxact::Component::new()
-            .set_vendor(base.vendor().clone())?
-            .set_library(base.library().clone())?
-            .set_name(base.name().clone())?
-            .set_version(base.version().clone())?
+            .set_vendor(base.vendor().to_owned())?
+            .set_library(base.library().to_owned())?
+            .set_name(base.name().to_owned())?
+            .set_version(base.version().to_owned())?
             .set_memory_maps(memory_maps)?)
     }
 }

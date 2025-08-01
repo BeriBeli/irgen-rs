@@ -1,3 +1,4 @@
+mod args;
 mod error;
 mod excel;
 mod logger;
@@ -8,20 +9,23 @@ use std::collections::HashMap;
 use std::fs;
 
 use calamine::{Reader, Xlsx, open_workbook};
+use clap::Parser;
 use polars::prelude::*;
 
-use crate::parser::parser_register;
-use crate::schema::base::dataframe_to_registers;
-use crate::schema::ipxact;
 use crate::{
+    args::Args,
     excel::ToDataFrame,
-    schema::base::{dataframe_to_blocks, dataframe_to_component},
+    parser::parser_register,
+    schema::base::{df_to_blks, df_to_compo, df_to_regs},
+    schema::ipxact,
 };
 
 fn main() -> anyhow::Result<(), error::Error> {
     logger::init();
 
-    let source = "example.xlsx".to_string();
+    let args = Args::parse();
+
+    let source = args.input;
 
     let mut wb: Xlsx<_> = open_workbook(&source)?;
 
@@ -40,30 +44,28 @@ fn main() -> anyhow::Result<(), error::Error> {
         let component_df = df_map
             .get("version")
             .ok_or_else(|| error::Error::NotFound("version".into()))?;
-        dataframe_to_component(component_df, || {
+        df_to_compo(component_df, || {
             let blocks_df = df_map
                 .get("address_map")
                 .ok_or_else(|| error::Error::NotFound("address_map".into()))?;
-            dataframe_to_blocks(blocks_df, |s| {
+            df_to_blks(blocks_df, |s| {
                 tracing::debug!("block_name: {}", s);
                 let register_df = df_map
                     .get(s)
                     .ok_or_else(|| error::Error::NotFound(s.into()))?;
                 let parsered_df = parser_register(register_df)?;
-                dataframe_to_registers(&parsered_df)
+                df_to_regs(&parsered_df)
             })
         })?
     };
 
-    // tracing::info!("{:#?}", component);
-
     let ipxact_component = ipxact::Component::from(&component)?;
 
     let xml = quick_xml::se::to_string(&ipxact_component)?;
-    let json = serde_json::to_string_pretty(&ipxact_component)?;
+    // let json = serde_json::to_string_pretty(&ipxact_component)?;
 
-    fs::write("example.xml", xml)?;
-    fs::write("example.json", json)?;
+    fs::write(args.output, xml)?;
+    // fs::write("example.json", json)?;
 
     Ok(())
 }

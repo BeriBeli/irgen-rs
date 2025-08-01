@@ -21,21 +21,9 @@ pub enum Error {
     #[error("IO error: {0}")]
     IO(#[from] std::io::Error),
 
-    #[error("String error: {0}")]
-    StringError(String),
-
-    #[error("HashMap not found for key {0}")]
+    #[error("Key Error: Not found for key {0}")]
     NotFound(String),
-}
 
-impl From<&str> for Error {
-    fn from(s: &str) -> Self {
-        Error::StringError(s.to_string())
-    }
-}
-
-impl From<String> for Error {
-    fn from(s: String) -> Self {
-        Error::StringError(s)
-    }
+    #[error("Empty Error: No data")]
+    Empty(String),
 }

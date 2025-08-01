@@ -1,6 +1,7 @@
+use crate::error::Error;
 use polars::prelude::*;
 
-pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error::Error> {
+pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
     let filled_df = df
         .clone()
         .lazy()
@@ -17,6 +18,7 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, crate::error
                 .cast(DataType::Int32)
                 .sum()
                 .over(&[col("ADDR")])
+                .cast(DataType::String)
                 .alias("REG_WIDTH"),
             (col("WIDTH")
                 .cast(DataType::Int32)
