@@ -65,11 +65,12 @@ fn main() -> anyhow::Result<(), error::Error> {
     let xml_str = quick_xml::se::to_string(&ipxact_component)?;
     // let json_str = serde_json::to_string_pretty(&ipxact_component)?;
 
-
-    let xml_file = args.output.as_deref()
+    let xml_file = args
+        .output
+        .as_deref()
         .map(PathBuf::from)
         .unwrap_or_else(|| Path::new(&source).with_extension("xml"));
-        
+
     fs::write(xml_file, xml_str)?;
 
     // fs::write(json_file, json_str)?;
