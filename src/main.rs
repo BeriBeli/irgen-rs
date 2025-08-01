@@ -7,6 +7,7 @@ mod schema;
 
 use std::collections::HashMap;
 use std::fs;
+use std::path::{Path, PathBuf};
 
 use calamine::{Reader, Xlsx, open_workbook};
 use clap::Parser;
@@ -25,9 +26,9 @@ fn main() -> anyhow::Result<(), error::Error> {
 
     let args = Args::parse();
 
-    let source = args.input;
+    let source = Path::new(&args.input);
 
-    let mut wb: Xlsx<_> = open_workbook(&source)?;
+    let mut wb: Xlsx<_> = open_workbook(source)?;
 
     let sheets = wb.worksheets();
 
@@ -61,11 +62,17 @@ fn main() -> anyhow::Result<(), error::Error> {
 
     let ipxact_component = ipxact::Component::from(&component)?;
 
-    let xml = quick_xml::se::to_string(&ipxact_component)?;
-    // let json = serde_json::to_string_pretty(&ipxact_component)?;
+    let xml_str = quick_xml::se::to_string(&ipxact_component)?;
+    // let json_str = serde_json::to_string_pretty(&ipxact_component)?;
 
-    fs::write(args.output, xml)?;
-    // fs::write("example.json", json)?;
+
+    let xml_file = args.output.as_deref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| Path::new(&source).with_extension("xml"));
+        
+    fs::write(xml_file, xml_str)?;
+
+    // fs::write(json_file, json_str)?;
 
     Ok(())
 }
