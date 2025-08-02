@@ -24,6 +24,6 @@ pub enum Error {
     #[error("Key Error: Not found for key {0}")]
     NotFound(String),
 
-    #[error("Empty Error: No data")]
+    #[error("Empty Error: {0}")]
     Empty(String),
 }
