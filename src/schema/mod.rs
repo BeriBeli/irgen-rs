@@ -10,7 +10,7 @@ impl ipxact::Component {
         let memory_maps = ipxact::MemoryMaps::new()
             .set_memory_map(vec![
                 ipxact::MemoryMap::new()
-                    .set_name("default_memory_map".to_string())?
+                    .set_name(base.name().to_owned())?
                     .set_address_block(base.blks().iter().map(|blk| -> anyhow::Result<ipxact::Block, Error> {
                         Ok(ipxact::Block::new()
                             .set_name(blk.name().to_owned())?
