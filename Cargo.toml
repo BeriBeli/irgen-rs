@@ -1,6 +1,9 @@
 [package]
 name = "irgen"
-version = "0.8.0"
+version = "0.8.1"
+description = "convert register description spreadsheets in a specific format into IP-XACT XML"
+authors = ["BeriBeli"]
+license = "MIT"
 edition = "2024"
 
 [dependencies]
@@ -15,3 +18,4 @@ serde_json = "1.0.141"
 quick-xml ={ version = "0.38.0", features = ["serialize"]}
 clap = { version = "4.5.42", features = ["derive"] }
 derive_builder = "0.20.2"
+regex = "1.11.1"

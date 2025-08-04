@@ -10,11 +10,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use calamine::{Reader, Xlsx, open_workbook};
-// use clap::Parser;
+use clap::Parser;
 use polars::prelude::*;
 
 use crate::{
-    // args::Args,
+    args::Args,
     excel::ToDataFrame,
     parser::parser_register,
     schema::base::{df_to_blks, df_to_compo, df_to_regs},
@@ -24,10 +24,9 @@ use crate::{
 fn main() -> anyhow::Result<(), error::Error> {
     logger::init();
 
-    // let args = Args::parse();
+    let args = Args::parse();
 
-    // let source = Path::new(&args.input);
-    let source = Path::new("example.xlsx");
+    let source = Path::new(&args.input);
 
     let mut wb: Xlsx<_> = open_workbook(source)?;
 
@@ -62,29 +61,23 @@ fn main() -> anyhow::Result<(), error::Error> {
     };
 
     let ipxact_component = ipxact::Component::from(&component)?;
-    let regvue_document = regvue::Document::from(&component)?;
 
     let xml_str = quick_xml::se::to_string(&ipxact_component)?;
-    let json_str = serde_json::to_string_pretty(&regvue_document)?;
 
-    // let xml_file = args
-    //     .output
-    //     .as_deref()
-    //     .map(PathBuf::from)
-    //     .unwrap_or_else(|| Path::new(&source).with_extension("xml"));
+    let xml_file = args
+        .output
+        .as_deref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| Path::new(&source).with_extension("xml"));
 
-    // let json_file = args
-    //     .output
-    //     .as_deref()
-    //     .map(PathBuf::from)
-    //     .unwrap_or_else(|| Path::new(&source).with_extension("json"));
+    fs::write(&xml_file, xml_str)?;
 
-    let xml_file = Path::new(&source).with_extension("xml");
-    let json_file = Path::new(&source).with_extension("json");
-
-    fs::write(xml_file, xml_str)?;
-
-    fs::write(json_file, json_str)?;
+    if args.regvue {
+        let regvue_document = regvue::Document::from(&component)?;
+        let json_str = serde_json::to_string_pretty(&regvue_document)?;
+        let json_file = xml_file.with_extension("json");
+        fs::write(&json_file, json_str)?;
+    }
 
     Ok(())
 }

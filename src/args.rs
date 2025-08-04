@@ -10,4 +10,7 @@ pub struct Args {
     /// Path for the output XML file.
     #[arg(short, long)]
     pub output: Option<String>,
+
+    #[clap(long)]
+    pub regvue: bool,
 }
