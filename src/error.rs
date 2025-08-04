@@ -26,4 +26,7 @@ pub enum Error {
 
     #[error("Empty Error: {0}")]
     Empty(String),
+
+    #[error("Builder Error: {0}")]
+    Builder(#[from] crate::schema::SchemaError),
 }

@@ -199,7 +199,7 @@ impl Block {
     }
 
     pub fn set_description(mut self, description: String) -> anyhow::Result<Self, Error> {
-        self.description = Some(description);
+        self.description = description.into();
         Ok(self)
     }
 
@@ -240,7 +240,7 @@ impl Register {
         Ok(self)
     }
     pub fn set_description(mut self, description: String) -> anyhow::Result<Self, Error> {
-        self.description = Some(description);
+        self.description = description.into();
         Ok(self)
     }
     pub fn set_address_offset(mut self, address_offset: String) -> anyhow::Result<Self, Error> {
@@ -277,7 +277,7 @@ impl Field {
     }
 
     pub fn set_description(mut self, description: String) -> anyhow::Result<Self, Error> {
-        self.description = Some(description);
+        self.description = description.into();
         Ok(self)
     }
 

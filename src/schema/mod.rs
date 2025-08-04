@@ -3,7 +3,36 @@ pub mod base;
 pub mod ipxact;
 pub mod regvue;
 
+use std::collections::HashMap;
+
 use crate::error::Error;
+
+#[derive(Debug, thiserror::Error)]
+pub enum SchemaError {
+    #[error("Regvue Schema error: {0}")]
+    RegvueSchema(#[from] regvue::SchemaBuilderError),
+
+    #[error("Regvue Link error: {0}")]
+    RegvueLink(#[from] regvue::LinkBuilderError),
+
+    #[error("Regvue Root error: {0}")]
+    RegvueRoot(#[from] regvue::RootBuilderError),
+
+    #[error("Regvue EnumValue error: {0}")]
+    RegvueEnumValue(#[from] regvue::EnumValueBuilderError),
+
+    #[error("Regvue Reset error: {0}")]
+    RegvueReset(#[from] regvue::ResetBuilderError),
+
+    #[error("Regvue Field error: {0}")]
+    RegvueField(#[from] regvue::FieldBuilderError),
+
+    #[error("Regvue Element error: {0}")]
+    RegvueElement(#[from] regvue::ElementBuilderError),
+
+    #[error("Regvue Document error: {0}")]
+    RegvueDocument(#[from] regvue::DocumentBuilderError),
+}
 
 impl ipxact::Component {
     pub fn from(base: &base::Component) -> anyhow::Result<Self, Error> {
@@ -57,8 +86,83 @@ impl ipxact::Component {
     }
 }
 
-// impl regvue::Document {
-//     pub fn from(base: &(base::Component)) -> Self {
-//         todo!()
-//     }
-// }
+impl regvue::Document {
+    pub fn from(base: &base::Component) -> anyhow::Result<Self, SchemaError> {
+        Ok(
+            regvue::DocumentBuilder::default()
+                .schema(
+                    regvue::SchemaBuilder::default()
+                        .name("register-description-format")
+                        .version(format!("v{}", base.version().to_owned()))
+                        .build()?
+                )
+                .root(
+                    regvue::RootBuilder::default()
+                        .desc(base.name())
+                        .version(format!("v{}", base.version().to_owned()))
+                        .children(
+                            base.blks().iter().map(|blk| {
+                                blk.name().to_owned()
+                            }).collect::<Vec<_>>()
+                        )
+                        .default_reset("RS".to_owned())
+                        .build()?
+                )
+                .elements(
+                    {
+                        let mut elements = HashMap::new();
+                        for blk in base.blks() {
+                            let blk_name = blk.name().to_owned();
+                            
+                            elements.insert(
+                                blk_name.clone(),
+                                regvue::ElementBuilder::default()
+                                    .r#type("blk")
+                                    .id(blk_name.clone())
+                                    .name(blk_name.clone())
+                                    .children(
+                                        blk.regs().iter().map(|reg| {
+                                            format!("{}.{}", blk_name.clone(), reg.name())
+                                        }).collect::<Vec<_>>()
+                                    )
+                                    .build()?
+                            );
+
+                            for reg in blk.regs() {
+                                let reg_name = reg.name().to_owned();
+                                let block_reg_name = format!("{}.{}", blk_name, reg.name().to_owned());
+                                elements.insert(
+                                    block_reg_name.clone(),
+                                    regvue::ElementBuilder::default()
+                                        .r#type("reg")
+                                        .id(block_reg_name)
+                                        .name(reg_name)
+                                        .offset(reg.offset().to_owned())
+                                        .fields(
+                                            {
+                                                let mut fields = Vec::new();
+                                                for field in reg.fields() {
+                                                    fields.push(
+                                                        regvue::FieldBuilder::default()
+                                                            .name(field.name())
+                                                            .lsb(field.offset().parse::<i32>().unwrap())
+                                                            .nbits(field.width().parse::<i32>().unwrap())
+                                                            .access(field.attr().to_ascii_lowercase())
+                                                            .reset(field.reset().to_owned())
+                                                            .build()?
+                                                    );
+                                                }
+                                                fields
+                                            }
+                                        )
+                                        .build()?
+                                );
+                            }
+                        }
+                        elements
+                    }
+                )
+                .build()?
+        )
+    }
+}

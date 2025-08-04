@@ -119,13 +119,13 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
                 .otherwise(col("REG"))
                 .alias("REG"),
         ])
-        .filter(
-            col("FIELD")
-                .str()
-                // remove row that contains rsvd\d* or reserved\d*
-                .contains(lit(r"^(rsvd|reserved)\d*$"), false)
-                .not()
-        )
+        // .filter(
+        //     col("FIELD")
+        //         .str()
+        //         // remove row that contains rsvd\d* or reserved\d*
+        //         .contains(lit(r"^(rsvd|reserved)\d*$"), false)
+        //         .not(),
+        // )
         .collect()?;
 
     tracing::debug!("{}", parsed_df);
