@@ -119,7 +119,7 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
                 .into_iter()
                 .map(|opt_s| {
                     opt_s
-                        .map(|s| s.to_owned())
+                        .map(|s| s.into())
                         .ok_or_else(|| PolarsError::NoData("No data found in dataframe".into()))
                 })
                 .collect()
@@ -152,7 +152,7 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
                 .column("REG")?
                 .str()?
                 .get(i)
-                .map(|s| s.to_owned())
+                .map(|s| s.into())
                 .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?;
             let offset = df
                 .column("ADDR")?
@@ -162,7 +162,7 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
                 .str()?
                 .get(0)
                 .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-                .to_owned();
+                .into();
 
             let size = df
                 .column("REG_WIDTH")?
@@ -172,7 +172,7 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
                 .str()?
                 .get(0)
                 .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-                .to_owned();
+                .into();
 
             Ok(Register {
                 name,
@@ -190,23 +190,23 @@ where
 {
     (0..df.height())
         .map(|i| {
-            let name = df
+            let name: String = df
                 .column("BLOCK")?
                 .str()?
                 .get(i)
-                .map(|s| s.to_owned())
+                .map(|s| s.into())
                 .ok_or_else(|| Error::Polars(PolarsError::NoData("No data in DataFrame".into())))?;
-            let offset = df
+            let offset: String = df
                 .column("OFFSET")?
                 .str()?
                 .get(i)
-                .map(|s| s.to_owned())
+                .map(|s| s.into())
                 .ok_or_else(|| Error::Polars(PolarsError::NoData("No data in DataFrame".into())))?;
-            let range = df
+            let range: String = df
                 .column("RANGE")?
                 .str()?
                 .get(i)
-                .map(|s| s.to_owned())
+                .map(|s| s.into())
                 .ok_or_else(|| Error::Polars(PolarsError::NoData("No data in DataFrame".into())))?;
             let size = "32".to_string();
             let regs = registers_extractor(&name)?;
@@ -236,7 +236,7 @@ where
             .str()?
             .get(0)
             .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-            .to_owned())
+            .into())
     };
 
     let vendor = extract_tag(&df, "VENDOR")?;

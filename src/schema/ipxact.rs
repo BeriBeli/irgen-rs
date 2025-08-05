@@ -12,13 +12,13 @@ const SCHEMA_LOCATION: &str = "http://www.accellera.org/XMLSchema/IPXACT/1685-20
 #[serde(rename = "ipxact:component")]
 pub struct Component {
     #[serde(rename = "@xmlns:ipxact")]
-    #[builder(default=IEEE1685_2014_NS.to_owned())]
+    #[builder(default=IEEE1685_2014_NS.into())]
     xmlns_ipxact: String,
     #[serde(rename = "@xmlns:xsi")]
-    #[builder(default=XSI_NS.to_owned())]
+    #[builder(default=XSI_NS.into())]
     xmlns_xsi: String,
     #[serde(rename = "@xsi:schemaLocation")]
-    #[builder(default=SCHEMA_LOCATION.to_owned())]
+    #[builder(default=SCHEMA_LOCATION.into())]
     schema_location: String,
     #[serde(rename = "ipxact:vendor")]
     vendor: String,

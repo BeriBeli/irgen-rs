@@ -9,9 +9,7 @@ use regex::Regex;
 
 use crate::error::Error;
 use crate::schema::attr::{
-    extract_access_value,
-    extract_modified_write_value,
-    extract_read_action_value,
+    extract_access_value, extract_modified_write_value, extract_read_action_value,
 };
 
 impl ipxact::Component {
@@ -53,7 +51,7 @@ impl ipxact::Component {
                                                         ipxact::ResetsBuilder::default()
                                                             .reset(vec![
                                                                 ipxact::ResetBuilder::default()
-                                                                    .value(field.reset().to_owned())
+                                                                    .value(field.reset())
                                                                     .build()?
                                                             ])
                                                             .build()?
@@ -75,10 +73,10 @@ impl ipxact::Component {
             .build()?;
 
         Ok(ipxact::ComponentBuilder::default()
-            .vendor(base.vendor().to_owned())
-            .library(base.library().to_owned())
-            .name(base.name().to_owned())
-            .version(base.version().to_owned())
+            .vendor(base.vendor())
+            .library(base.library())
+            .name(base.name())
+            .version(base.version())
             .memory_maps(memory_maps)
             .build()?)
     }
@@ -100,16 +98,16 @@ impl regvue::Document {
                     .children(
                         base.blks()
                             .iter()
-                            .map(|blk| blk.name().to_owned())
+                            .map(|blk| blk.name().into())
                             .collect::<Vec<_>>(),
                     )
-                    .default_reset("RS".to_owned())
+                    .default_reset(String::from("RS"))
                     .build()?,
             )
             .elements({
                 let mut elements = HashMap::new();
                 for blk in base.blks() {
-                    let blk_name = blk.name().to_owned();
+                    let blk_name: String = blk.name().into();
 
                     elements.insert(
                         blk_name.clone(),
@@ -127,7 +125,7 @@ impl regvue::Document {
                     );
 
                     for reg in blk.regs() {
-                        let reg_name = reg.name().to_owned();
+                        let reg_name: String = reg.name().into();
                         let block_reg_name = format!("{}.{}", blk_name, reg.name().to_owned());
                         elements.insert(
                             block_reg_name.clone(),

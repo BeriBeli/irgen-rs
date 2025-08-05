@@ -35,9 +35,7 @@ fn main() -> anyhow::Result<(), error::Error> {
     let df_map: HashMap<String, DataFrame> = sheets
         .iter()
         .map(|(sheet_name, range_data)| {
-            range_data
-                .to_data_frame()
-                .map(|df| (sheet_name.to_owned(), df))
+            range_data.to_data_frame().map(|df| (sheet_name.into(), df))
         })
         .collect::<Result<HashMap<_, _>, _>>()?;
 
