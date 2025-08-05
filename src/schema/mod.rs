@@ -107,26 +107,26 @@ impl regvue::Document {
             .elements({
                 let mut elements = HashMap::new();
                 for blk in base.blks() {
-                    let blk_name: String = blk.name().into();
+                    let blk_name = blk.name();
 
                     elements.insert(
-                        blk_name.clone(),
+                        blk_name.into(),
                         regvue::ElementBuilder::default()
                             .r#type("blk")
-                            .id(blk_name.clone())
-                            .name(blk_name.clone())
+                            .id(blk_name)
+                            .name(blk_name)
                             .children(
                                 blk.regs()
                                     .iter()
-                                    .map(|reg| format!("{}.{}", blk_name.clone(), reg.name()))
+                                    .map(|reg| format!("{}.{}", blk_name, reg.name()))
                                     .collect::<Vec<_>>(),
                             )
                             .build()?,
                     );
 
                     for reg in blk.regs() {
-                        let reg_name: String = reg.name().into();
-                        let block_reg_name = format!("{}.{}", blk_name, reg.name().to_owned());
+                        let reg_name = reg.name();
+                        let block_reg_name = format!("{}.{}", blk_name, reg.name());
                         elements.insert(
                             block_reg_name.clone(),
                             regvue::ElementBuilder::default()

@@ -140,11 +140,11 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
                 .zip(attribute_array.iter())
                 .zip(default_array.iter())
                 .map(|((((name, offset), width), attr), reset)| Field {
-                    name: name.clone(),
-                    offset: offset.clone(),
-                    width: width.clone(),
-                    attr: attr.clone(),
-                    reset: reset.clone(),
+                    name: name.into(),
+                    offset: offset.into(),
+                    width: width.into(),
+                    attr: attr.into(),
+                    reset: reset.into(),
                 })
                 .collect();
 
