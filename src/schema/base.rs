@@ -37,6 +37,7 @@ pub struct Field {
     width: String,
     attr: String,
     reset: String,
+    desc: String,
 }
 
 impl Component {
@@ -106,6 +107,9 @@ impl Field {
     pub fn reset(&self) -> &str {
         &self.reset
     }
+    pub fn desc(&self) -> &str {
+        &self.desc
+    }
 }
 
 pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
@@ -132,6 +136,7 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
             let width_array = extract_list(&df, "WIDTH", i)?;
             let attribute_array = extract_list(&df, "ATTRIBUTE", i)?;
             let default_array = extract_list(&df, "DEFAULT", i)?;
+            let description_array = extract_list(&df, "DESCRIPTION", i)?;
 
             let fields = name_array
                 .iter()
@@ -139,12 +144,14 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
                 .zip(width_array.iter())
                 .zip(attribute_array.iter())
                 .zip(default_array.iter())
-                .map(|((((name, offset), width), attr), reset)| Field {
+                .zip(description_array.iter())
+                .map(|(((((name, offset), width), attr), reset), desc)| Field {
                     name: name.into(),
                     offset: offset.into(),
                     width: width.into(),
                     attr: attr.into(),
                     reset: reset.into(),
+                    desc: desc.into(),
                 })
                 .collect();
 

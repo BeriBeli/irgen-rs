@@ -118,6 +118,10 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
                 )
                 .otherwise(col("REG"))
                 .alias("REG"),
+            when(col("DESCRIPTION").is_null())
+                .then(lit("No Description"))
+                .otherwise(col("DESCRIPTION"))
+                .alias("DESCRIPTION")
         ])
         // .filter(
         //     col("FIELD")
@@ -144,6 +148,7 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
             col("BYTES"),
             col("BIT_OFFSET"),
             col("DEFAULT"),
+            col("DESCRIPTION"),
             // col("BASE_REG"),
             // col("IS_EXPANDABLE"),
             // col("START"),

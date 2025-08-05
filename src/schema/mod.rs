@@ -56,6 +56,7 @@ impl ipxact::Component {
                                                             ])
                                                             .build()?
                                                     )
+                                                    .description(field.desc().to_owned())
                                                     .build()?
                                                 )
                                             }).collect::<Result<Vec<_>, _>>()?
@@ -144,6 +145,7 @@ impl regvue::Document {
                                                 .nbits(field.width().parse::<i32>()?)
                                                 .access(field.attr().to_ascii_lowercase())
                                                 .reset(field.reset().to_owned())
+                                                .doc(field.desc().to_owned())
                                                 .build()?,
                                         );
                                     }
