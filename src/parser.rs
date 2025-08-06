@@ -1,9 +1,9 @@
 use crate::error::Error;
 use polars::prelude::*;
 
-pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
+pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
     let filled_df = df
-        .clone()
+        // .clone()
         .lazy()
         .select([col("*").fill_null_with_strategy(FillNullStrategy::Forward(None))])
         .collect()?;
@@ -11,7 +11,7 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
     tracing::debug!("{}", filled_df);
 
     let parsed_df = filled_df
-        .clone()
+        // .clone()
         .lazy()
         .with_columns(&[
             col("WIDTH")
@@ -135,7 +135,7 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
     tracing::debug!("{}", parsed_df);
 
     let grouped_df = parsed_df
-        .clone()
+        // .clone()
         .lazy()
         .group_by_stable(["REG"])
         .agg([
