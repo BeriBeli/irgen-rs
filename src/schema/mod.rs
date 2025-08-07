@@ -12,9 +12,10 @@ use crate::schema::attr::{
     extract_access_value, extract_modified_write_value, extract_read_action_value,
 };
 
-impl ipxact::Component {
-    pub fn from(base: &base::Component) -> anyhow::Result<Self, Error> {
-        // use regex to remove rsvd\d* or reserved\d* in field
+impl TryFrom<&base::Component> for ipxact::Component 
+{
+    type Error = Error;
+    fn try_from(base: &base::Component) -> anyhow::Result<Self, Error> {
         let re = Regex::new(r"^(rsvd|reserved)\d*$")?;
 
         let memory_maps = ipxact::MemoryMapsBuilder::default()
@@ -83,19 +84,20 @@ impl ipxact::Component {
     }
 }
 
-impl regvue::Document {
-    pub fn from(base: &base::Component) -> anyhow::Result<Self, Error> {
+impl TryFrom<&base::Component> for regvue::Document {
+    type Error = Error;
+    fn try_from(base: &base::Component) -> anyhow::Result<Self, Error> {
         Ok(regvue::DocumentBuilder::default()
             .schema(
                 regvue::SchemaBuilder::default()
                     .name("register-description-format")
-                    .version(format!("v{}", base.version().to_owned()))
+                    .version(format!("v{}", base.version()))
                     .build()?,
             )
             .root(
                 regvue::RootBuilder::default()
                     .desc(base.name())
-                    .version(format!("v{}", base.version().to_owned()))
+                    .version(format!("v{}", base.version()))
                     .children(
                         base.blks()
                             .iter()
@@ -128,31 +130,29 @@ impl regvue::Document {
                     for reg in blk.regs() {
                         let reg_name = reg.name();
                         let block_reg_name = format!("{}.{}", blk_name, reg.name());
-                        elements.insert(
-                            block_reg_name.clone(),
-                            regvue::ElementBuilder::default()
-                                .r#type("reg")
-                                .id(block_reg_name)
-                                .name(reg_name)
-                                .offset(reg.offset().to_owned())
-                                .fields({
-                                    let mut fields = Vec::new();
-                                    for field in reg.fields() {
-                                        fields.push(
-                                            regvue::FieldBuilder::default()
-                                                .name(field.name())
-                                                .lsb(field.offset().parse::<i32>()?)
-                                                .nbits(field.width().parse::<i32>()?)
-                                                .access(field.attr().to_ascii_lowercase())
-                                                .reset(field.reset().to_owned())
-                                                .doc(field.desc().to_owned())
-                                                .build()?,
-                                        );
-                                    }
-                                    fields
-                                })
-                                .build()?,
-                        );
+                        let element =regvue::ElementBuilder::default()
+                            .r#type("reg")
+                            .id(&block_reg_name)
+                            .name(reg_name)
+                            .offset(reg.offset().to_owned())
+                            .fields({
+                                let mut fields = Vec::new();
+                                for field in reg.fields() {
+                                    fields.push(
+                                        regvue::FieldBuilder::default()
+                                            .name(field.name())
+                                            .lsb(field.offset().parse::<i32>()?)
+                                            .nbits(field.width().parse::<i32>()?)
+                                            .access(field.attr().to_ascii_lowercase())
+                                            .reset(field.reset().to_owned())
+                                            .doc(field.desc().to_owned())
+                                            .build()?,
+                                    );
+                                }
+                                fields
+                            })
+                            .build()?;
+                        elements.insert(block_reg_name, element);
                     }
                 }
                 elements
