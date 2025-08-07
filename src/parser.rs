@@ -15,6 +15,21 @@ pub fn parse_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
         // Unmerge cells and distribute content to each cell
         .select([col("*").fill_null_with_strategy(FillNullStrategy::Forward(None))])
         .with_columns(&[
+            // caculate reg width by sum field width
+            // "32"
+            col("WIDTH")
+                .cast(DataType::UInt32)
+                .sum()
+                .over(&[col("ADDR")])
+                .cast(DataType::String)
+                .alias("REG_WIDTH"),
+            // reg width (bytes)
+            (col("WIDTH")
+                .cast(DataType::UInt32)
+                .sum()
+                .over(&[col("ADDR")])
+                / lit(8))
+                .alias("BYTES"),
             // reg's base name to parse "reg{n}, n=0~3"
             coalesce(&[col("REG")
                 .first()
@@ -58,40 +73,8 @@ pub fn parse_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
                 .str()
                 .extract(lit(r"\[(?:\d+:)?(\d+)\]"), 1)
                 .alias("BIT_OFFSET"),
-            ])
-        .with_columns(&[
-            col("BIT_OFFSET")
-                .cast(DataType::UInt32)
-                .alias("BIT_OFFSET_START"),
-            col("BIT")
-                .str()
-                .extract(lit(r"\[(\d+)(?::\d+)?\]"), 1)
-                .cast(DataType::UInt32)
-                .alias("BIT_OFFSET_END"),
-            ])
+        ])
         .with_column(
-            (col("BIT_OFFSET_END")
-                - col("BIT_OFFSET_START")
-                + lit(1))
-                .cast(DataType::String)
-                .alias("WIDTH"),
-        )
-        .with_columns(&[
-            // caculate reg width by sum field width
-            // "32"
-            col("WIDTH")
-                .cast(DataType::UInt32)
-                .sum()
-                .over(&[col("ADDR")])
-                .cast(DataType::String)
-                .alias("REG_WIDTH"),
-            // reg width (bytes)
-            (col("WIDTH")
-                .cast(DataType::UInt32)
-                .sum()
-                .over(&[col("ADDR")])
-                / lit(8))
-                .alias("BYTES"),
             when(
                 col("IS_EXPANDABLE")
                     .and(col("START").is_not_null())
@@ -105,7 +88,6 @@ pub fn parse_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
             ))
             .otherwise(lit(Null {}))
             .alias("N_SERIES"),
-            ]
         )
         .explode(by_name(["N_SERIES"], true))
         .filter(
