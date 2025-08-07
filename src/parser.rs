@@ -1,64 +1,69 @@
 use crate::error::Error;
 use polars::prelude::*;
 
-pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
-    let filled_df = df
-        .to_owned()
-        .lazy()
-        .select([col("*").fill_null_with_strategy(FillNullStrategy::Forward(None))])
-        .collect()?;
+pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
 
-    tracing::debug!("{}", filled_df);
+    // Unmerge cells and distribute content to each cell
+    let filled_df = df
+        .lazy()
+        .select([col("*").fill_null_with_strategy(FillNullStrategy::Forward(None))]);
 
     let parsed_df = filled_df
-        .lazy()
         .with_columns(&[
+            // TODO
             col("WIDTH")
-                .cast(DataType::Int32)
+                .cast(DataType::UInt32)
                 .sum()
                 .over(&[col("ADDR")])
                 .cast(DataType::String)
                 .alias("REG_WIDTH"),
+            // TODO
             (col("WIDTH")
-                .cast(DataType::Int32)
+                .cast(DataType::UInt32)
                 .sum()
                 .over(&[col("ADDR")])
                 / lit(8))
-            .alias("BYTES"),
+                .alias("BYTES"),
+            // TODO
             coalesce(&[col("REG")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit(r"(.*?)\{n\}"), 1)])
-            .alias("BASE_REG"),
+                .alias("BASE_REG"),
+            // TODO
             col("REG")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .contains(lit(r"\{n\}"), false)
                 .alias("IS_EXPANDABLE"),
+            // TODO
             col("REG")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit(r"n\s*=\s*(\d+)"), 1)
-                .cast(DataType::Int32)
+                .cast(DataType::UInt32)
                 .alias("START"),
+            // TODO
             col("REG")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit(r"~\s*(\d+)"), 1)
-                .cast(DataType::Int32)
+                .cast(DataType::UInt32)
                 .alias("END"),
+            // TODO
             col("ADDR")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit("0x([0-9a-fA-F]+)"), 1)
                 .str()
-                .to_integer(lit(16), false)
+                .to_integer(lit(16), Some(DataType::UInt32), false)
                 .alias("BASE_ADDR"),
+            // TODO
             col("BIT")
                 .over(&[col("ADDR")])
                 .str()
@@ -75,12 +80,12 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
                 col("START"),
                 col("END") + lit(1),
                 lit(1),
-                DataType::Int32,
+                DataType::UInt32,
             ))
             .otherwise(lit(Null {}))
             .alias("N_SERIES"),
         )
-        .explode(&["N_SERIES"])
+        .explode(by_name(["N_SERIES"], true))
         .filter(
             col("IS_EXPANDABLE")
                 .and(col("N_SERIES").is_not_null())
@@ -92,12 +97,12 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
         .with_columns(&[
             when(col("IS_EXPANDABLE"))
                 .then(
-                    (col("BASE_ADDR").cast(DataType::Int32)
-                        + col("N_SERIES").cast(DataType::Int32)
-                            * col("BYTES").cast(DataType::Int32))
+                    (col("BASE_ADDR").cast(DataType::UInt32)
+                        + col("N_SERIES").cast(DataType::UInt32)
+                            * col("BYTES").cast(DataType::UInt32))
                     .map(
                         |s| {
-                            let ca = s.i32()?;
+                            let ca = s.u32()?;
                             let new_ca: StringChunked = ca
                                 .into_iter()
                                 .map(|opt_x| opt_x.map(|x| format!("0x{:X}", x)))
@@ -121,20 +126,9 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
                 .then(lit("No Description"))
                 .otherwise(col("DESCRIPTION"))
                 .alias("DESCRIPTION")
-        ])
-        // .filter(
-        //     col("FIELD")
-        //         .str()
-        //         // remove row that contains rsvd\d* or reserved\d*
-        //         .contains(lit(r"^(rsvd|reserved)\d*$"), false)
-        //         .not(),
-        // )
-        .collect()?;
-
-    tracing::debug!("{}", parsed_df);
+        ]);
 
     let grouped_df = parsed_df
-        .lazy()
         .group_by_stable(["REG"])
         .agg([
             col("ADDR"),
@@ -160,34 +154,3 @@ pub fn parser_register(df: &DataFrame) -> anyhow::Result<DataFrame, Error> {
 
     Ok(grouped_df)
 }
-
-// let df = df!(
-//     "ADDR" => &[
-//         Some("0x0"), Some("0x4"), None, None, None,
-//         Some("0x8"), Some("0xc"), Some("0x10"), Some("0x20"), None
-//     ],
-//     "REG" => &[
-//         Some("reg0"), Some("reg1"), None, None, None,
-//         Some("reg2"), Some("reg3"), Some("rega{n}, n=0~3"), Some("regb{n}, n=0~3"), None
-//     ],
-//     "FIELD" => &[
-//         Some("field0"), Some("reserved"), Some("field1"), Some("reserved"), Some("field0"),
-//         Some("field0"), Some("field0"), Some("field0"), Some("field1"), Some("field0")
-//     ],
-//     "BIT" => &[
-//         Some("[31:0]"), Some("[31:24]"), Some("[23:16]"), Some("[15:8]"), Some("[7:0]"),
-//         Some("[31:0]"), Some("[31:0]"), Some("[31:0]"), Some("[31:16]"), Some("[15:0]")
-//     ],
-//     "WIDTH" => &[
-//         Some("32"), Some("8"), Some("8"), Some("8"), Some("8"),
-//         Some("32"), Some("32"), Some("32"), Some("16"), Some("16")
-//     ],
-//     "ATTRIBUTE" => &[
-//         Some("RW"), Some("RO"), Some("RW"), Some("RO"), Some("RW"),
-//         Some("W1C"), Some("RC"), Some("RW"), Some("RW"), Some("RW")
-//     ],
-//     "DEFAULT" => &[
-//         Some("0x1234"), Some("0"), Some("0"), Some("0"), Some("0"),
-//         Some("0"), Some("0"), Some("0"), Some("0"), Some("0")
-//     ]
-// )?;

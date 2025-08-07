@@ -112,48 +112,10 @@ impl Field {
     }
 }
 
-pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
-    let extract_list =
-        |df: &DataFrame, col_name: &str, idx: usize| -> anyhow::Result<Vec<String>, PolarsError> {
-            df.column(col_name)?
-                .list()?
-                .get_as_series(idx)
-                .ok_or_else(|| PolarsError::NoData("No data at index".into()))?
-                .str()?
-                .into_iter()
-                .map(|opt_s| {
-                    opt_s
-                        .map(|s| s.into())
-                        .ok_or_else(|| PolarsError::NoData("No data found in dataframe".into()))
-                })
-                .collect()
-        };
+pub fn df_to_regs(df: DataFrame) -> anyhow::Result<Vec<Register>, Error> {
 
     (0..df.height())
         .map(|i| {
-            let name_array = extract_list(&df, "FIELD", i)?;
-            let offset_array = extract_list(&df, "BIT_OFFSET", i)?;
-            let width_array = extract_list(&df, "WIDTH", i)?;
-            let attribute_array = extract_list(&df, "ATTRIBUTE", i)?;
-            let default_array = extract_list(&df, "DEFAULT", i)?;
-            let description_array = extract_list(&df, "DESCRIPTION", i)?;
-
-            let fields = name_array
-                .iter()
-                .zip(offset_array.iter())
-                .zip(width_array.iter())
-                .zip(attribute_array.iter())
-                .zip(default_array.iter())
-                .zip(description_array.iter())
-                .map(|(((((name, offset), width), attr), reset), desc)| Field {
-                    name: name.into(),
-                    offset: offset.into(),
-                    width: width.into(),
-                    attr: attr.into(),
-                    reset: reset.into(),
-                    desc: desc.into(),
-                })
-                .collect();
 
             let name = df
                 .column("REG")?
@@ -181,6 +143,45 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
                 .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
                 .into();
 
+            let extract_list = |col_name: &str, idx: usize| -> anyhow::Result<Vec<String>, PolarsError> {
+                df.column(col_name)?
+                    .list()?
+                    .get_as_series(idx)
+                    .ok_or_else(|| PolarsError::NoData("No data at index".into()))?
+                    .str()?
+                    .into_iter()
+                    .map(|opt_s| {
+                        opt_s
+                            .map(|s| s.into())
+                            .ok_or_else(|| PolarsError::NoData("No data found in dataframe".into()))
+                    })
+                    .collect()
+            };
+            
+            let name_array = extract_list("FIELD", i)?;
+            let offset_array = extract_list("BIT_OFFSET", i)?;
+            let width_array = extract_list("WIDTH", i)?;
+            let attribute_array = extract_list("ATTRIBUTE", i)?;
+            let default_array = extract_list("DEFAULT", i)?;
+            let description_array = extract_list("DESCRIPTION", i)?;
+
+            let fields = name_array
+                .iter()
+                .zip(offset_array.iter())
+                .zip(width_array.iter())
+                .zip(attribute_array.iter())
+                .zip(default_array.iter())
+                .zip(description_array.iter())
+                .map(|(((((name, offset), width), attr), reset), desc)| Field {
+                    name: name.into(),
+                    offset: offset.into(),
+                    width: width.into(),
+                    attr: attr.into(),
+                    reset: reset.into(),
+                    desc: desc.into(),
+                })
+                .collect();
+
             Ok(Register {
                 name,
                 offset,
@@ -191,9 +192,9 @@ pub fn df_to_regs(df: &DataFrame) -> anyhow::Result<Vec<Register>, Error> {
         .collect()
 }
 
-pub fn df_to_blks<F>(df: &DataFrame, registers_extractor: F) -> anyhow::Result<Vec<Block>, Error>
+pub fn df_to_blks<F>(df: DataFrame, mut registers_extractor: F) -> anyhow::Result<Vec<Block>, Error>
 where
-    F: Fn(&str) -> anyhow::Result<Vec<Register>, Error>,
+    F: FnMut(&str) -> anyhow::Result<Vec<Register>, Error>,
 {
     (0..df.height())
         .map(|i| {
@@ -229,27 +230,29 @@ where
         .collect()
 }
 
-pub fn df_to_compo<F>(df: &DataFrame, blocks_extractor: F) -> anyhow::Result<Component, Error>
+pub fn df_to_compo<F>(df: DataFrame, mut blocks_extractor: F) -> anyhow::Result<Component, Error>
 where
-    F: Fn() -> anyhow::Result<Vec<Block>, Error>,
-{
-    let extract_tag = |df: &DataFrame, tag: &str| -> anyhow::Result<String, Error> {
-        Ok(df
-            .to_owned()
-            .lazy()
+    F: FnMut() -> anyhow::Result<Vec<Block>, Error>,
+{    
+    let lazy_df = df.lazy();
+
+    let extract_tag = |tag: &str| -> anyhow::Result<String, Error> {
+        Ok(lazy_df
+            .clone()
             .filter(col("TAG").eq(lit(tag)))
             .collect()?
             .column("VALUE")?
             .str()?
             .get(0)
             .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-            .into())
+            .into()
+        )
     };
+    let vendor = extract_tag("VENDOR")?;
+    let library = extract_tag("LIBRARY")?;
+    let name = extract_tag("NAME")?;
+    let version = extract_tag("VERSION")?;
 
-    let vendor = extract_tag(&df, "VENDOR")?;
-    let library = extract_tag(&df, "LIBRARY")?;
-    let name = extract_tag(&df, "NAME")?;
-    let version = extract_tag(&df, "VERSION")?;
     let blks = blocks_extractor()?;
 
     Ok(Component {

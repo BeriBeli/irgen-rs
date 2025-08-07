@@ -28,7 +28,7 @@ fn main() -> anyhow::Result<(), error::Error> {
     let source = Path::new(&args.input);
     let mut wb: Xlsx<_> = open_workbook(source)?;
     let sheets = wb.worksheets();
-    let df_map: HashMap<String, DataFrame> = sheets
+    let mut df_map: HashMap<String, DataFrame> = sheets
         .iter()
         .map(|(sheet_name, range_data)| {
             range_data.to_data_frame().map(|df| (sheet_name.into(), df))
@@ -38,25 +38,25 @@ fn main() -> anyhow::Result<(), error::Error> {
     let component = {
 
         let component_df = df_map
-            .get("version")
+            .remove("version")
             .ok_or_else(|| error::Error::NotFound("version".into()))?;
 
-        df_to_compo(&component_df, || {
+        df_to_compo(component_df, || {
 
             let blocks_df = df_map
-                .get("address_map")
+                .remove("address_map")
                 .ok_or_else(|| error::Error::NotFound("address_map".into()))?;
 
-            df_to_blks(&blocks_df, |s| {
+            df_to_blks(blocks_df, |s| {
 
                 tracing::debug!("block_name: {}", s);
 
                 let register_df = df_map
-                    .get(s)
+                    .remove(s)
                     .ok_or_else(|| error::Error::NotFound(s.into()))?;
                 let parsered_df = parser_register(register_df)?;
 
-                df_to_regs(&parsered_df)
+                df_to_regs(parsered_df)
 
             })
         })?
