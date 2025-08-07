@@ -16,7 +16,7 @@ use polars::prelude::*;
 use crate::{
     args::Args,
     excel::ToDataFrame,
-    parser::parser_register,
+    parser::parse_register,
     schema::base::{df_to_blks, df_to_compo, df_to_regs},
     schema::{ipxact, regvue},
 };
@@ -35,26 +35,26 @@ fn main() -> anyhow::Result<(), error::Error> {
         })
         .collect::<Result<HashMap<_, _>, _>>()?;
 
-    let component = {
+    let compo = {
 
-        let component_df = df_map
+        let compo_df = df_map
             .remove("version")
             .ok_or_else(|| error::Error::NotFound("version".into()))?;
 
-        df_to_compo(component_df, || {
+        df_to_compo(compo_df, || {
 
-            let blocks_df = df_map
+            let blks_df = df_map
                 .remove("address_map")
                 .ok_or_else(|| error::Error::NotFound("address_map".into()))?;
 
-            df_to_blks(blocks_df, |s| {
+            df_to_blks(blks_df, |s| {
 
                 tracing::debug!("block_name: {}", s);
 
-                let register_df = df_map
+                let regs_df = df_map
                     .remove(s)
                     .ok_or_else(|| error::Error::NotFound(s.into()))?;
-                let parsered_df = parser_register(register_df)?;
+                let parsered_df = parse_register(regs_df)?;
 
                 df_to_regs(parsered_df)
 
@@ -62,8 +62,8 @@ fn main() -> anyhow::Result<(), error::Error> {
         })?
     };
 
-    let ipxact_component = ipxact::Component::try_from(&component)?;
-    let xml_str = quick_xml::se::to_string(&ipxact_component)?;
+    let ipxact_compo = ipxact::Component::try_from(&compo)?;
+    let xml_str = quick_xml::se::to_string(&ipxact_compo)?;
     let xml_file = args
         .output
         .as_deref()
@@ -73,8 +73,8 @@ fn main() -> anyhow::Result<(), error::Error> {
     fs::write(&xml_file, xml_str)?;
 
     if args.regvue {
-        let regvue_document = regvue::Document::try_from(&component)?;
-        let json_str = serde_json::to_string_pretty(&regvue_document)?;
+        let regvue_doc = regvue::Document::try_from(&compo)?;
+        let json_str = serde_json::to_string_pretty(&regvue_doc)?;
         let json_file = xml_file.with_extension("json");
 
         fs::write(&json_file, json_str)?;

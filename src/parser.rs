@@ -1,44 +1,34 @@
 use crate::error::Error;
 use polars::prelude::*;
 
-pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
+pub fn parse_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
 
-    // Unmerge cells and distribute content to each cell
-    let filled_df = df
+    let parsed_df = df
         .lazy()
-        .select([col("*").fill_null_with_strategy(FillNullStrategy::Forward(None))]);
-
-    let parsed_df = filled_df
+        // fullfill empty description
+        .with_column(
+            when(col("DESCRIPTION").is_null())
+                .then(lit("No Description"))
+                .otherwise(col("DESCRIPTION"))
+                .alias("DESCRIPTION")
+        )
+        // Unmerge cells and distribute content to each cell
+        .select([col("*").fill_null_with_strategy(FillNullStrategy::Forward(None))])
         .with_columns(&[
-            // TODO
-            col("WIDTH")
-                .cast(DataType::UInt32)
-                .sum()
-                .over(&[col("ADDR")])
-                .cast(DataType::String)
-                .alias("REG_WIDTH"),
-            // TODO
-            (col("WIDTH")
-                .cast(DataType::UInt32)
-                .sum()
-                .over(&[col("ADDR")])
-                / lit(8))
-                .alias("BYTES"),
-            // TODO
+            // reg's base name to parse "reg{n}, n=0~3"
             coalesce(&[col("REG")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit(r"(.*?)\{n\}"), 1)])
                 .alias("BASE_REG"),
-            // TODO
+            // if need explode "reg{n}, n=0~3" to reg_0, reg_1, reg_2, reg_3
             col("REG")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .contains(lit(r"\{n\}"), false)
                 .alias("IS_EXPANDABLE"),
-            // TODO
             col("REG")
                 .first()
                 .over(&[col("ADDR")])
@@ -46,7 +36,6 @@ pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
                 .extract(lit(r"n\s*=\s*(\d+)"), 1)
                 .cast(DataType::UInt32)
                 .alias("START"),
-            // TODO
             col("REG")
                 .first()
                 .over(&[col("ADDR")])
@@ -54,7 +43,7 @@ pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
                 .extract(lit(r"~\s*(\d+)"), 1)
                 .cast(DataType::UInt32)
                 .alias("END"),
-            // TODO
+            // convert reg's offset to decimal
             col("ADDR")
                 .first()
                 .over(&[col("ADDR")])
@@ -63,14 +52,46 @@ pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
                 .str()
                 .to_integer(lit(16), Some(DataType::UInt32), false)
                 .alias("BASE_ADDR"),
-            // TODO
+            // get field's bit offset
             col("BIT")
                 .over(&[col("ADDR")])
                 .str()
-                .extract(lit(r"\[(?:\d+:)?(\d+)]"), 1)
+                .extract(lit(r"\[(?:\d+:)?(\d+)\]"), 1)
                 .alias("BIT_OFFSET"),
-        ])
+            ])
+        .with_columns(&[
+            col("BIT_OFFSET")
+                .cast(DataType::UInt32)
+                .alias("BIT_OFFSET_START"),
+            col("BIT")
+                .str()
+                .extract(lit(r"\[(\d+)(?::\d+)?\]"), 1)
+                .cast(DataType::UInt32)
+                .alias("BIT_OFFSET_END"),
+            ])
         .with_column(
+            (col("BIT_OFFSET_END")
+                - col("BIT_OFFSET_START")
+                + lit(1))
+                .cast(DataType::String)
+                .alias("WIDTH"),
+        )
+        .with_columns(&[
+            // caculate reg width by sum field width
+            // "32"
+            col("WIDTH")
+                .cast(DataType::UInt32)
+                .sum()
+                .over(&[col("ADDR")])
+                .cast(DataType::String)
+                .alias("REG_WIDTH"),
+            // reg width (bytes)
+            (col("WIDTH")
+                .cast(DataType::UInt32)
+                .sum()
+                .over(&[col("ADDR")])
+                / lit(8))
+                .alias("BYTES"),
             when(
                 col("IS_EXPANDABLE")
                     .and(col("START").is_not_null())
@@ -84,6 +105,7 @@ pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
             ))
             .otherwise(lit(Null {}))
             .alias("N_SERIES"),
+            ]
         )
         .explode(by_name(["N_SERIES"], true))
         .filter(
@@ -122,22 +144,17 @@ pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
                 )
                 .otherwise(col("REG"))
                 .alias("REG"),
-            when(col("DESCRIPTION").is_null())
-                .then(lit("No Description"))
-                .otherwise(col("DESCRIPTION"))
-                .alias("DESCRIPTION")
-        ]);
-
-    let grouped_df = parsed_df
+        ])
+        .lazy()
         .group_by_stable(["REG"])
         .agg([
-            col("ADDR"),
-            col("REG_WIDTH"),
+            col("ADDR").first(),
+            col("REG_WIDTH").first(),
             col("FIELD"),
             // col("BIT"),
             col("WIDTH"),
             col("ATTRIBUTE"),
-            col("BYTES"),
+            // col("BYTES"),
             col("BIT_OFFSET"),
             col("DEFAULT"),
             col("DESCRIPTION"),
@@ -150,7 +167,5 @@ pub fn parser_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
         ])
         .collect()?;
 
-    tracing::debug!("{}", grouped_df);
-
-    Ok(grouped_df)
+    Ok(parsed_df)
 }

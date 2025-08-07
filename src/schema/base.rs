@@ -117,32 +117,21 @@ pub fn df_to_regs(df: DataFrame) -> anyhow::Result<Vec<Register>, Error> {
     (0..df.height())
         .map(|i| {
 
-            let name = df
-                .column("REG")?
-                .str()?
-                .get(i)
-                .map(|s| s.into())
-                .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?;
-            let offset = df
-                .column("ADDR")?
-                .list()?
-                .get_as_series(i)
-                .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-                .str()?
-                .get(0)
-                .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-                .into();
+            let extract_str = |col_name: &str| -> anyhow::Result<String, Error> {
+                Ok(
+                    df.column(col_name)?
+                        .str()?
+                        .get(i)
+                        .map(|s| s.into())
+                        .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
+                )
+            };
 
-            let size = df
-                .column("REG_WIDTH")?
-                .list()?
-                .get_as_series(i)
-                .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-                .str()?
-                .get(0)
-                .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-                .into();
+            let name = extract_str("REG")?;
+            let offset = extract_str("ADDR")?;
+            let size = extract_str("REG_WIDTH")?;
 
+            // not consume df
             let extract_list = |col_name: &str, idx: usize| -> anyhow::Result<Vec<String>, PolarsError> {
                 df.column(col_name)?
                     .list()?
@@ -233,25 +222,21 @@ where
 pub fn df_to_compo<F>(df: DataFrame, mut blocks_extractor: F) -> anyhow::Result<Component, Error>
 where
     F: FnMut() -> anyhow::Result<Vec<Block>, Error>,
-{    
-    let lazy_df = df.lazy();
-
-    let extract_tag = |tag: &str| -> anyhow::Result<String, Error> {
-        Ok(lazy_df
-            .clone()
-            .filter(col("TAG").eq(lit(tag)))
-            .collect()?
-            .column("VALUE")?
+{
+    let extract_str = |tag: &str| -> anyhow::Result<String, Error> {
+        Ok( df
+            .column(tag)?
             .str()?
             .get(0)
+            .map(|s| s.into())
             .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-            .into()
         )
     };
-    let vendor = extract_tag("VENDOR")?;
-    let library = extract_tag("LIBRARY")?;
-    let name = extract_tag("NAME")?;
-    let version = extract_tag("VERSION")?;
+
+    let vendor = extract_str("VENDOR")?;
+    let library = extract_str("LIBRARY")?;
+    let name = extract_str("NAME")?;
+    let version = extract_str("VERSION")?;
 
     let blks = blocks_extractor()?;
 
