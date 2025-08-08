@@ -12,8 +12,7 @@ use crate::schema::attr::{
     extract_access_value, extract_modified_write_value, extract_read_action_value,
 };
 
-impl TryFrom<&base::Component> for ipxact::Component 
-{
+impl TryFrom<&base::Component> for ipxact::Component {
     type Error = Error;
     fn try_from(base: &base::Component) -> anyhow::Result<Self, Error> {
         let re = Regex::new(r"^(rsvd|reserved)\d*$")?;
@@ -130,7 +129,7 @@ impl TryFrom<&base::Component> for regvue::Document {
                     for reg in blk.regs() {
                         let reg_name = reg.name();
                         let block_reg_name = format!("{}.{}", blk_name, reg.name());
-                        let element =regvue::ElementBuilder::default()
+                        let element = regvue::ElementBuilder::default()
                             .r#type("reg")
                             .id(&block_reg_name)
                             .name(reg_name)

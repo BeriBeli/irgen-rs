@@ -2,7 +2,6 @@ use crate::error::Error;
 use polars::prelude::*;
 
 pub fn parse_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
-
     let parsed_df = df
         .lazy()
         // fullfill empty description
@@ -10,7 +9,7 @@ pub fn parse_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
             when(col("DESCRIPTION").is_null())
                 .then(lit("No Description"))
                 .otherwise(col("DESCRIPTION"))
-                .alias("DESCRIPTION")
+                .alias("DESCRIPTION"),
         )
         // Unmerge cells and distribute content to each cell
         .select([col("*").fill_null_with_strategy(FillNullStrategy::Forward(None))])
@@ -29,14 +28,14 @@ pub fn parse_register(df: DataFrame) -> anyhow::Result<DataFrame, Error> {
                 .sum()
                 .over(&[col("ADDR")])
                 / lit(8))
-                .alias("BYTES"),
+            .alias("BYTES"),
             // reg's base name to parse "reg{n}, n=0~3"
             coalesce(&[col("REG")
                 .first()
                 .over(&[col("ADDR")])
                 .str()
                 .extract(lit(r"(.*?)\{n\}"), 1)])
-                .alias("BASE_REG"),
+            .alias("BASE_REG"),
             // if need explode "reg{n}, n=0~3" to reg_0, reg_1, reg_2, reg_3
             col("REG")
                 .first()

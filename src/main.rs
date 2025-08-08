@@ -36,19 +36,16 @@ fn main() -> anyhow::Result<(), error::Error> {
         .collect::<Result<HashMap<_, _>, _>>()?;
 
     let compo = {
-
         let compo_df = df_map
             .remove("version")
             .ok_or_else(|| error::Error::NotFound("version".into()))?;
 
         df_to_compo(compo_df, || {
-
             let blks_df = df_map
                 .remove("address_map")
                 .ok_or_else(|| error::Error::NotFound("address_map".into()))?;
 
             df_to_blks(blks_df, |s| {
-
                 tracing::debug!("block_name: {}", s);
 
                 let regs_df = df_map
@@ -57,7 +54,6 @@ fn main() -> anyhow::Result<(), error::Error> {
                 let parsered_df = parse_register(regs_df)?;
 
                 df_to_regs(parsered_df)
-
             })
         })?
     };

@@ -113,18 +113,15 @@ impl Field {
 }
 
 pub fn df_to_regs(df: DataFrame) -> anyhow::Result<Vec<Register>, Error> {
-
     (0..df.height())
         .map(|i| {
-
             let extract_str = |col_name: &str| -> anyhow::Result<String, Error> {
-                Ok(
-                    df.column(col_name)?
-                        .str()?
-                        .get(i)
-                        .map(|s| s.into())
-                        .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-                )
+                Ok(df
+                    .column(col_name)?
+                    .str()?
+                    .get(i)
+                    .map(|s| s.into())
+                    .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?)
             };
 
             let name = extract_str("REG")?;
@@ -132,21 +129,22 @@ pub fn df_to_regs(df: DataFrame) -> anyhow::Result<Vec<Register>, Error> {
             let size = extract_str("REG_WIDTH")?;
 
             // not consume df
-            let extract_list = |col_name: &str, idx: usize| -> anyhow::Result<Vec<String>, PolarsError> {
-                df.column(col_name)?
-                    .list()?
-                    .get_as_series(idx)
-                    .ok_or_else(|| PolarsError::NoData("No data at index".into()))?
-                    .str()?
-                    .into_iter()
-                    .map(|opt_s| {
-                        opt_s
-                            .map(|s| s.into())
-                            .ok_or_else(|| PolarsError::NoData("No data found in dataframe".into()))
-                    })
-                    .collect()
-            };
-            
+            let extract_list =
+                |col_name: &str, idx: usize| -> anyhow::Result<Vec<String>, PolarsError> {
+                    df.column(col_name)?
+                        .list()?
+                        .get_as_series(idx)
+                        .ok_or_else(|| PolarsError::NoData("No data at index".into()))?
+                        .str()?
+                        .into_iter()
+                        .map(|opt_s| {
+                            opt_s.map(|s| s.into()).ok_or_else(|| {
+                                PolarsError::NoData("No data found in dataframe".into())
+                            })
+                        })
+                        .collect()
+                };
+
             let name_array = extract_list("FIELD", i)?;
             let offset_array = extract_list("BIT_OFFSET", i)?;
             let width_array = extract_list("WIDTH", i)?;
@@ -224,13 +222,12 @@ where
     F: FnMut() -> anyhow::Result<Vec<Block>, Error>,
 {
     let extract_str = |tag: &str| -> anyhow::Result<String, Error> {
-        Ok( df
+        Ok(df
             .column(tag)?
             .str()?
             .get(0)
             .map(|s| s.into())
-            .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?
-        )
+            .ok_or_else(|| PolarsError::NoData("No data in DataFrame".into()))?)
     };
 
     let vendor = extract_str("VENDOR")?;
